@@ -14,7 +14,12 @@ typedef Duration MomentDurationGetter(int? index);
 /// moment progress and gap between each segment and returns widget for segment
 ///
 typedef Widget ProgressSegmentBuilder(
-    BuildContext context, int index, double progress, double gap);
+    BuildContext context,
+    int index,
+    double progress,
+    double gap,
+    Function stopController,
+    Function resumeController);
 
 ///
 /// Widget that allows you to use stories mechanism in your apps
@@ -130,7 +135,12 @@ class Story extends StatefulWidget {
   final bool fullscreen;
 
   static Widget instagramProgressSegmentBuilder(
-          BuildContext context, int index, double progress, double gap) =>
+          BuildContext context,
+          int index,
+          double progress,
+          double gap,
+          Function stopController,
+          Function resumeController) =>
       Container(
         height: 2.0,
         margin: EdgeInsets.symmetric(horizontal: gap / 2),
@@ -151,7 +161,8 @@ class Story extends StatefulWidget {
   _StoryState createState() => _StoryState();
 }
 
-class _StoryState extends State<Story> with SingleTickerProviderStateMixin {
+class _StoryState extends State<Story>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
   late int _currentIdx;
   bool _isInFullscreenMode = false;
@@ -208,12 +219,14 @@ class _StoryState extends State<Story> with SingleTickerProviderStateMixin {
 
   Future<void> _hideStatusBar() =>
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+
   Future<void> _showStatusBar() =>
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
           overlays: SystemUiOverlay.values);
 
   @override
   void initState() {
+    WidgetsBinding.instance?.addObserver(this);
     if (widget.fullscreen) {
       _hideStatusBar();
     }
@@ -247,7 +260,29 @@ class _StoryState extends State<Story> with SingleTickerProviderStateMixin {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) {
+        resumeController();
+      }
+    } else {
+      if (mounted) {
+        stopController();
+      }
+    }
+  }
+
+  void stopController() {
+    _controller.stop();
+  }
+
+  void resumeController() {
+    _controller.forward();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance?.removeObserver(this);
     if (widget.fullscreen) {
       _showStatusBar();
     }
@@ -284,11 +319,12 @@ class _StoryState extends State<Story> with SingleTickerProviderStateMixin {
                               animation: _controller,
                               builder: (context, _) {
                                 return widget.progressSegmentBuilder(
-                                  context,
-                                  idx,
-                                  _controller.value,
-                                  widget.progressSegmentGap,
-                                );
+                                    context,
+                                    idx,
+                                    _controller.value,
+                                    widget.progressSegmentGap,
+                                    stopController,
+                                    resumeController);
                               },
                             )
                           : widget.progressSegmentBuilder(
@@ -296,7 +332,8 @@ class _StoryState extends State<Story> with SingleTickerProviderStateMixin {
                               idx,
                               idx < _currentIdx ? 1.0 : 0.0,
                               widget.progressSegmentGap,
-                            ),
+                              stopController,
+                              resumeController),
                     );
                   },
                 )

@@ -21,6 +21,9 @@ typedef Widget ProgressSegmentBuilder(
     Function stopController,
     Function resumeController);
 
+typedef MomentWidgetBuilder = Widget Function(BuildContext context, int index,
+    Function stopController, Function resumeController);
+
 ///
 /// Widget that allows you to use stories mechanism in your apps
 ///
@@ -73,7 +76,7 @@ class Story extends StatefulWidget {
   ///
   /// Builder that gets executed executed for each moment
   ///
-  final IndexedWidgetBuilder momentBuilder;
+  final MomentWidgetBuilder momentBuilder;
 
   ///
   /// Function that must return Duration for each moment
@@ -300,6 +303,8 @@ class _StoryState extends State<Story>
           _currentIdx < widget.momentCount
               ? _currentIdx
               : widget.momentCount - 1,
+          stopController,
+          resumeController
         ),
         Positioned(
           top: widget.topOffset ?? MediaQuery.of(context).padding.top,

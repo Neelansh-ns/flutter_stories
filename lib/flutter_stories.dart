@@ -64,6 +64,8 @@ class Story extends StatefulWidget {
     this.startAt = 0,
     this.topOffset,
     this.fullscreen = true,
+    this.onStoryCompleteAutomatically,
+    this.onStoryCompleteManually,
   })  : assert(momentCount > 0),
         assert(momentSwitcherFraction >= 0),
         assert(momentSwitcherFraction < double.infinity),
@@ -137,6 +139,13 @@ class Story extends StatefulWidget {
   ///
   final bool fullscreen;
 
+  /// Function that executes when the story completes automatically, when the [momentDurationGetter] ends.
+  final VoidCallback? onStoryCompleteAutomatically;
+
+  /// Function that executes when the story completes manually,on tap left or right.
+  /// Returns the direction of the tap as String `left` or `right`.
+  final Function(String)? onStoryCompleteManually;
+
   static Widget instagramProgressSegmentBuilder(
           BuildContext context,
           int index,
@@ -205,8 +214,10 @@ class _StoryState extends State<Story>
     final width = MediaQuery.of(context).size.width;
     if (details.localPosition.dx < width * widget.momentSwitcherFraction) {
       _switchToPrevOrFinish();
+      widget.onStoryCompleteManually?.call('left');
     } else {
       _switchToNextOrFinish();
+      widget.onStoryCompleteManually?.call('right');
     }
   }
 
@@ -242,6 +253,7 @@ class _StoryState extends State<Story>
     )..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           _switchToNextOrFinish();
+          widget.onStoryCompleteAutomatically?.call();
         }
       });
 
